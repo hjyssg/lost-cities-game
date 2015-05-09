@@ -132,30 +132,25 @@ function game(alice_ai, bob_ai)
 
 function test_calculate_point()
 {
-  var cards =  [
-  [ 'yellow', 'double' ],
-  [ 'yellow', 2 ],
-  [ 'yellow', 3 ]]
+  var cards = [ new Card('yellow', 'double'),
+                new Card('yellow', 2),
+                new Card('yellow', 3)]
   var point = calculate_point(cards)
   assert(point == -30)
 
-   var cards =  [
-  [ 'yellow', 2 ],
-  [ 'yellow', 3 ],
-  [ 'yellow', 5 ],
-  [ 'yellow', 10 ]
-  ]
+   var cards =  [ new Card('yellow', 2),
+                  new Card('yellow', 3),
+                  new Card('yellow', 5),
+                  new Card('yellow', 10)]
   var point = calculate_point(cards)
   assert(point == 0)
 
-  var cards =  [
-  [ 'red', 'double' ], 
-  [ 'red', 2 ],
-  [ 'red', 3 ],
-  [ 'red', 5 ],
-  [ 'red', 6 ],
-  [ 'red', 10 ]
-  ]
+  var cards =  [  new Card('red', 'double'), 
+                  new Card('red', 2),
+                  new Card('red', 3),
+                  new Card('red', 5),
+                  new Card('red', 6),
+                  new Card('red', 10)]
   var point = calculate_point(cards)
   assert(point == 12)
 }

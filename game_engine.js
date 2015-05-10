@@ -28,7 +28,7 @@ Array.prototype.last = function()
 {
   assert(this.length > 0, "last failed")
   return this[this.length-1]
-}s
+}
 
 function assert(condition, message) {
   if (!condition) {
@@ -125,10 +125,21 @@ function idiot_ai(self_id)
           var last_card =  desk.public_cards[this.id].last()
         }
 
+        var putable_cards = []
+        var give_upable_cards = []
+
         for(var jj=0; jj<player_cards.length;jj++)
         {
            var card = player_cards[jj]
+           if(card.color != color) {continue;}
            if ( desk.public_cards[this.id].isEmpty() ||(!last_card && card.cmpr(last_card)>0))
+           {
+               //feasible
+               putable_cards.push(card)
+           }else
+           {
+              give_upable_cards.push(card)
+           }
 
         }
 
@@ -187,7 +198,7 @@ this.player_cards[player_id2] = this.unused_cards.splice(0,8)
 this.__sort_player_cards();
   // log(this.player_cards)
 
-  this.public_spcae = {}
+  this .public_cards= {}
   for (var ii = 0; ii< __COLORS__.length; ii++){
     var color = __COLORS__[ii]
     this.public_spcae[color] = { player_id1:[],  player_id2:[], "give_up":[]} 

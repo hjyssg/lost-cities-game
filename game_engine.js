@@ -128,7 +128,7 @@ function sort_cards(player_cards) {
 }
 
 
-function create_color_2_card_table(player_cards) {
+function associate_Color_2_Card(player_cards) {
     var color_2_cards_Table = {}
     for (var ii = 0; ii < player_cards.length; ii++) {
         var card = player_cards[ii]
@@ -197,11 +197,9 @@ function hjy_ai(self_id) {
     this.cmd_to_put = []
     var therehold = -2
 
-
-
     this.find_focus_color = function (player_cards) {
         var focus_colors = []
-        var color_2_cards_Table = create_color_2_card_table(player_cards)
+        var color_2_cards_Table = associate_Color_2_Card(player_cards)
         var color_point_table = {}
             // console.log(color_2_cards_Table)
         for (var color in color_2_cards_Table) {
@@ -217,7 +215,7 @@ function hjy_ai(self_id) {
             delete color_point_table[color]
         }
 
-        console.log(this.id, " is going focus on ", this.focus_colors)
+        console.log(this.id, " will focus on ", this.focus_colors)
         return focus_colors
             // console.log(this.focus_colors)
     }
@@ -233,70 +231,59 @@ function hjy_ai(self_id) {
         return  cmd1[2].cmpr(cmd2[2])
     }
 
-    this.get_next_cmd = function (player_cards, public_cards, desk, op_id) {
+    this.get_next_cmd = function (player_cards, public_cards, unused_card_num, op_id) {
+        
+        var leftTime = unused_card_num/ 2;
+
         //for the first round pick the colors want to focus on
-        if (!this.focus_colors) {
-            this.focus_colors = this.find_focus_color(player_cards)
-        }
+        if (!this.focus_colors) { this.focus_colors = this.find_focus_color(player_cards)    }
 
         //如果之前的步骤想好了，按之前的步骤来
         //TO DO if it is legal or better solution
         if (!this.cmd_to_put.isEmpty()) {
-            // console.log("他妈的")
-            console.log(this.id, " does not need to think this time")
-                // this.print()
-
-               
-                this.cmd_to_put.sort(cmd_sorter())     
-
+            console.log('这回不用想了', this.cmd_to_put)
+            this.cmd_to_put.sort(cmd_sorter)     
             var cmd = this.cmd_to_put.dequeue()
-
-
             var card = cmd[2]
-            if (RULE.is_putCmd_legal(cmd.public_cards, player_cards)) {
-                return cmd
+            var color = card.color
 
+            if ( RULE.is_putCmd_legal(cmd, public_cards, player_cards) == true )
+            {
+                console.log(this.id, " does not need to think this time")
+
+                // if（ RULE.calculate_cards_point_by(public_cards[color][this.id]) == 0 && leftTime < this.cmd_to_put.length )
+                if(leftTime < this.cmd_to_put.length ){
+
+                    console.log("来不及了")
+                    //来不及了
+                }else
+                {
+
+                    return cmd
+                }
             }
         }
 
         //卡用完了，考虑换颜色
         if (this.cmd_to_put.isEmpty()) {
+            log("卡用完了，考虑换颜色")
             this.focus_colors = this.find_focus_color(player_cards)
         }
 
-
-        var color_2_cards_Table = create_color_2_card_table(player_cards)
-        var color_2_point = create_color_point_table(color_2_cards_Table)
-        var leftTime = desk.unused_card_num() / 2;
+        console.log("想好的是", this.cmd_to_put)
 
 
-        // console.log("the fucos color is", this.focus_colors)
+        var self_color_2_cards_Table = associate_Color_2_Card(player_cards)
+        var color_2_point = create_color_point_table(self_color_2_cards_Table)
+
 
         for (var ii = 0; ii < this.focus_colors.length; ii++) 
         {
             var color = this.focus_colors[ii]
-            var sameColorCards = color_2_cards_Table[color]
-            if (!sameColorCards || sameColorCards.isEmpty()) { continue  }
-            // console.log(color)
-            var giveUpZone = public_cards[color]["give_up"]
-            //如果有同颜色的卡可以pick
-            if (giveUpZone.isEmpty() || giveUpZone.last().cmpr(sameColorCards[0]) > 0) { continue }
-            
-            if (leftTime < sameColorCards.length + 1) { continue}     //要来得及
-                    //要比现在有的牌的小
-            if (public_cards[color][this.id].isEmpty() || public_cards[color][this.id].last().cmpr(giveUpZone.last()) <= 0) {
-                var cmd = [this.id, "pick", color]
-                if (RULE.is_Pick_legal(cmd, public_cards, player_cards)) {
-                    return cmd
-                }
-            }
-                
-            
-
             //牌足够好，发
             if (color_2_point[color] > therehold) 
             {
-                var cards = color_2_cards_Table[color]
+                var cards = self_color_2_cards_Table[color]
                 check_if_same_color(cards)
                 check_if_cards_sorted(cards)
 
@@ -310,12 +297,54 @@ function hjy_ai(self_id) {
                     }
                 }
 
-                var cmd = this.cmd_to_put.dequeue();
-                if (RULE.is_Pick_legal(cmd, public_cards, player_cards)) {
-                    return cmd;
+
+                if(!this.cmd_to_put.isEmpty()){
+                    this.cmd_to_put.sort(cmd_sorter)  
+
+                    var cmd = this.cmd_to_put.dequeue();
+                    console.log("找到可以用的牌 发第一张",cmd)
+
+                    if (RULE.is_putCmd_legal(cmd, public_cards, player_cards)) {
+                        return cmd;
+                    }else
+                    {
+                        log("他妈的 怎么回事")
+                        log(cmd)
+                    }
                 }
             }
         }
+
+      
+        //根据之前的focus color 计算
+        for (var ii = 0; ii < this.focus_colors.length; ii++) 
+        {
+            var color = this.focus_colors[ii]
+            var same_color_cards_holding = self_color_2_cards_Table[color]
+            if (!same_color_cards_holding || same_color_cards_holding.isEmpty()) { continue  }
+            // console.log(color)
+            var giveUpZone = public_cards[color]["give_up"]
+            if(giveUpZone.isEmpty()){continue;}
+            //如果有同颜色的卡可以pick
+            
+            if (leftTime < same_color_cards_holding.length -4 && leftTime < 10 ) { continue}     //要来得及
+            
+            //要比现在有的牌的小
+            var col = public_cards[color][this.id]
+            console.log(col)
+            if (col.isEmpty() || col.last().cmpr(giveUpZone.last()) <= 0) {
+                var cmd = [this.id, "pick", color]
+                if (RULE.is_PickCmd_legal(cmd, public_cards, player_cards)) {
+                    return cmd
+                }else
+                {
+                    log("捡不了")
+                }
+            }
+         }       
+
+    
+
 
         //TO DO
         //look if eneymie need
@@ -332,14 +361,12 @@ function hjy_ai(self_id) {
         }
 
 
-        // var e = new Error()
-        // console.log(e.stack);
-        // log("DO NOT KNOW HOW TO DO !!???")
-        // this.print()
-        // console.log(color_2_point)
-        // while (true){}
-        // throw "DO NOT WHAT TO DO! OMG"
-
+        var e = new Error()
+        console.log(e.stack);
+        log("DO NOT KNOW HOW TO DO !!???")
+        this.print()
+        console.log(color_2_point)
+        while (true){}
     }
 
 }
@@ -401,13 +428,10 @@ var RULE = {
         if (action == "put") {
             //remove card from player 
             var card = cmd[2]
-            var index = player_cards[id].indexOf(card);
+            var index = player_cards.indexOf(card);
             if (index < 0) {
                 return false
             }
-
-            player_cards[id].splice(index, 1);
-
             var putted_cards = public_cards[card.color][id]
 
             if (!putted_cards.isEmpty() && putted_cards.last().cmpr(card) > 0) {
@@ -421,8 +445,7 @@ var RULE = {
 
 
     is_giveUpCmd_legal :function (cmd, public_cards, player_cards) {
-        var id = cmd[0],
-            action = cmd[1];
+        var id = cmd[0],  action = cmd[1];
         if (action == "give_up") 
         {
             var card = cmd[2]
@@ -435,9 +458,8 @@ var RULE = {
         }
     },
 
-    is_Pick_legal : function (cmd, public_cards, player_cards) {
-        var id = cmd[0],
-            action = cmd[1];
+    is_PickCmd_legal : function (cmd, public_cards, player_cards) {
+        var id = cmd[0],    action = cmd[1];
         if (action == "pick") 
         {
             var color = cmd[2]
@@ -519,36 +541,40 @@ function Desk(player_id1, player_id2) {
         if (!cmd) {
             throw "NULL CMD"
         }
-        var id = cmd[0],
-            action = cmd[1];
+        var id = cmd[0], action = cmd[1];
         if (action == "put") {
             //remove card from player 
             var card = cmd[2]
+
+            if(!RULE.is_putCmd_legal(cmd, this.public_cards, this.player_cards[id]))
+            {
+                var e = new Error();   console.log(e.stack);
+                throw "add the wrong card"
+            }
+
             var index = this.player_cards[id].indexOf(card);
             this.player_cards[id].splice(index, 1);
 
 
-
-            if (!this.public_cards[card.color][id].isEmpty()) {
-                log("put checking")
-                console.log("on the dock is ", this.public_cards[card.color][id].last())
-                console.log("going to put", card)
-                assert(this.public_cards[card.color][id].last().cmpr(card) <= 0, "add the wrong card")
-            }
-
             //add to public space player site
             this.public_cards[card.color][id].push(card)
-                //give playew new card   
+            //give playew new card   
             this.player_cards[id].push(_unused_cards.pop())
 
         } else if (action == "give_up") {
             //remove card from player
             // log(cmd)
             var card = cmd[2]
+            if(!RULE.is_giveUpCmd_legal(cmd, this.public_cards, this.player_cards[id]))
+            {
+                var e = new Error();   console.log(e.stack);
+                throw  "wrong give up"
+            }
+
+
             var index = this.player_cards[id].indexOf(card);
             this.player_cards[id].splice(index, 1);
             //add to public space player site
-            // console.log(this.public_cards[card.color])
             this.public_cards[card.color]["give_up"].push(card)
                 //give playew new card   
             this.player_cards[id].push(_unused_cards.pop())
@@ -556,6 +582,12 @@ function Desk(player_id1, player_id2) {
         } else if (action == "pick") {
             //pick the card
             var color = cmd[2]
+            if(!RULE.is_PickCmd_legal(cmd, this.public_cards, this.player_cards[id]))
+            {
+                var e = new Error();   console.log(e.stack);
+                throw  "wrong pick"
+            }
+
             assert(this.public_cards[color]["give_up"].length > 0)
             var new_card = this.public_cards[color]["give_up"].pop()
                 //add to the player
@@ -582,14 +614,14 @@ function game(ai1, ai2) {
         desk.print()
         console.log()
 
-        var cmd = ai1.get_next_cmd(desk.player_cards[id1], desk.public_cards, desk, id2)
+        var cmd = ai1.get_next_cmd(desk.player_cards[id1], desk.public_cards, desk.unused_card_num(), id2)
         console.log(cmd[0] + " " + cmd[1] + " [" + cmd[2].toString() + "]")
         desk.apply_cmd(cmd)
         if (desk.unused_card_num() == 0) {
             console.log("------end " + round + "------\n")
             break;
         }
-        cmd = ai2.get_next_cmd(desk.player_cards[id2], desk.public_cards, desk, id1)
+        cmd = ai2.get_next_cmd(desk.player_cards[id2], desk.public_cards, desk.unused_card_num(), id1)
         console.log(cmd[0] + " " + cmd[1] + " [" + cmd[2].toString() + "]")
         desk.apply_cmd(cmd)
 

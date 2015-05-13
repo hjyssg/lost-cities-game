@@ -180,7 +180,7 @@ function idiot_ai(self_id)
 
 
 //better AI
-// AI must implement this get_next_cmd = function (player_cards, public_cards, unused_card_num, op_id)
+// AI must implement this get_next_cmd = function(PLAYER_CARDS, PUBLIC_CARDS, unused_card_num, op_id, self_point, op_point)
 //and return cmd to tell what it want to do
 // cmd = [player_id,"put", card];
 // cmd = [player_id,"give_up", card]s
@@ -190,7 +190,7 @@ function hjy_ai(self_id)
 {
     this.id = self_id
     this.cmd_to_put = []
-    var therehold = -2
+    var therehold = 0
 
     //return a table that key is color
     //value is the array of the same color card
@@ -306,7 +306,6 @@ function hjy_ai(self_id)
 
     this.get_next_cmd = function(PLAYER_CARDS, PUBLIC_CARDS, unused_card_num, op_id, self_point, op_point)
     {
-
         var leftTime = Math.floor(unused_card_num / 2);
         LOG("目测 这场还有", leftTime, "回合")
 
@@ -832,23 +831,35 @@ function Game(ai1, ai2)
         var ai1_point = RULE.calculate_player_point(desk, id1)
         var ai2_point = RULE.calculate_player_point(desk, id2)
 
-        //the first ai think 
-        var cmd = ai1.get_next_cmd(desk.player_cards[id1], desk.public_cards, desk.unusedNum(), id2, ai1_point, ai2_point)
-        LOG(cmd[0] + " " + cmd[1] + " [" + cmd[2].toString() + "]")
-        desk.apply_cmd(cmd)
+        try {
+            //the first ai think 
+            var cmd = ai1.get_next_cmd(desk.player_cards[id1], desk.public_cards, desk.unusedNum(), id2, ai1_point, ai2_point)
+            LOG(cmd[0] + " " + cmd[1] + " [" + cmd[2].toString() + "]")
+            desk.apply_cmd(cmd)
+        }catch(err)
+        {
+            LOG(id1," throw a exception a throw. He/She lose")
+            return id2
+        }
+
         if (desk.unusedNum() == 0)
         {
             LOG("------end " + round + "------\n")
             break;
         }
 
-
-        //the second ai think 
-        ai1_point = RULE.calculate_player_point(desk, id1)
-        ai2_point = RULE.calculate_player_point(desk, id2)
-        cmd = ai2.get_next_cmd(desk.player_cards[id2], desk.public_cards, desk.unusedNum(), id1, ai2_point, ai1_point)
-        LOG(cmd[0] + " " + cmd[1] + " [" + cmd[2].toString() + "]")
-        desk.apply_cmd(cmd)
+         try {
+            //the second ai think 
+            ai1_point = RULE.calculate_player_point(desk, id1)
+            ai2_point = RULE.calculate_player_point(desk, id2)
+            cmd = ai2.get_next_cmd(desk.player_cards[id2], desk.public_cards, desk.unusedNum(), id1, ai2_point, ai1_point)
+            LOG(cmd[0] + " " + cmd[1] + " [" + cmd[2].toString() + "]")
+            desk.apply_cmd(cmd)
+         }catch(err)
+        {
+            LOG(id2," throw a exception a throw. He/She lose")
+            return id1
+        }
 
         LOG("------end " + round + "------\n")
         round++

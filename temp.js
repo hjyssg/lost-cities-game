@@ -1,27 +1,62 @@
-// Dictionary.prototype.get_most_frq_color = function(color_frqs)
-//     {
-//      var most_often_color, max_frq;
-//      for(var color in color_frqs)
-//      {
-//       if (!most_often_color && !max_frq)
-//       {
-//         most_often_color = color
-//         max_frq = color_frqs[color]
-//       }
-//       else if(color_frqs[color] > max_frq)
-//       {
-//         most_often_color = color
-//         max_frq = color_frqs[color]
-//       }
-//     }
-//     return most_often_color;
-//   }
 
-
-function foo()
+/**
+*  
+*/
+function CardArray(cards)
 {
-  return 1, 2
+    this.cards = cards
+
+    this.length = function()
+    {
+        return this.cards.length
+    }
+
+    this.isEmpty = function()
+    {
+        return this.cards.isEmpty()
+    }
+
+    this.if_sorted = function() 
+    {
+        if (this.cards.isEmpty()) {
+            return true;
+        }
+        var prev = this.cards[0]
+        for (var ii = 0; ii < this.cards.length; ii++) {
+            var card = this.cards[ii]
+            if (card.cmpr(prev) < 0) {
+                return false;
+            }
+        prev = card
+        return true;
+    }
+
+
+    this.if_same_color = function() {
+        if (this.cards.isEmpty()) {
+            return true;
+        }
+        var prev = this.cards[0]
+        for (var ii = 0; ii < this.cards.length; ii++) {
+            var card = this.cards[ii]
+            if (card.color != prev.color) {
+                return false;
+            }
+            prev = card
+        }
+        return true;
+    }
+
+
+    function card_sorter(c1, c2) {
+    return c1.cmpr(c2)
+    }
+
+
+    this.sort = function() {
+        this.cards.sort(card_sorter)
+    }
+
 }
 
-var a, b = foo()
-console.log(a,b)
+

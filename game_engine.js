@@ -2,17 +2,27 @@
 
 
 //Some help functions below
-function log() {
-    var a = arguments
-    console.log(a[0]);
+var  LOG = console.log;
+
+//GLOBAL VARIBLES
+var COLORS = ["red", "yellow", "blue", "green", "white"],
+    CARD_NUM = 10,
+    _COST_ = 20
+
+function assert(condition, message) {
+    if (!condition) {
+        var e = new Error();
+        LOG(e.stack);
+        throw message || "Assertion failed";
+    }
 }
+
+
 
 function randInt(a, b) {
     assert(b > a, "random wrong")
     return Math.floor(Math.random() * (b - a + 1) + a)
 }
-
-
 
 Array.prototype.shuffle = function (arr) {
     function internal_shuffler() {
@@ -38,34 +48,43 @@ Array.prototype.last = function () {
     return this[this.length - 1]
 }
 
-function get_key_with_max_value(dict) {
+Object.prototype.getMaxKey = function()
+{
     var maxKey, maxValue;
-    for (var key in dict) {
+    for (var key in this) {
         if (!maxKey && !maxValue) {
             maxKey = key
-            maxValue = dict[key]
-        } else if (dict[key] > maxValue) {
+            maxValue = this[key]
+        } else if (this[key] > maxValue) {
             maxKey = key
-            maxValue = dict[key]
+            maxValue = this[key]
         }
     }
     return maxKey;
 }
 
 
-
-function assert(condition, message) {
-    if (!condition) {
-        var e = new Error();
-        console.log(e.stack);
-        throw message || "Assertion failed";
-    }
+Object.prototype.VClone = function (){
+    // http://stackoverflow.com/questions/728360/most-elegant-way-to-clone-a-javascript-object
+   return JSON.parse( JSON.stringify(this) );
 }
 
-//GLOBAL VARIBLES
-var __COLORS__ = ["red", "yellow", "blue", "green", "white"],
-    __VALUE_NUM__ = 10,
-    _COST_ = 20
+
+function clone(obj) {
+    if(obj === null || typeof(obj) !== 'object')
+        return obj;
+
+    var temp = obj.constructor(); // changed
+
+    for(var key in obj) {
+        if(Object.prototype.hasOwnProperty.call(obj, key)) {
+            temp[key] = clone(obj[key]);
+        }
+    }
+    return temp;
+}
+
+
 
 function Card(color, value) {
     this.color = color;
@@ -84,71 +103,29 @@ function Card(color, value) {
         var cv2 = card2.value == "double" ? 1 : card2.value
         return cv1 - cv2
     }
-}
 
-function card_sorter(c1, c2) {
-    return c1.cmpr(c2)
-}
 
-function check_if_cards_sorted(cards) {
-    if (cards.isEmpty()) {
-        return;
+    this.big = function(card2)
+    {
+        return this.cmpr(card2) > 0
     }
-    var prev = cards[0]
-    for (var ii = 0; ii < cards.length; ii++) {
-        var card = cards[ii]
-        if (card.cmpr(prev) < 0) {
-            console.log(cards)
-                // http://stackoverflow.com/questions/591857/how-can-i-get-a-javascript-stack-trace-when-i-throw-an-exception
-            var e = new Error();
-            console.log(e.stack);
-            throw "unsorted!!!"
-        }
-        prev = card
-    }
-}
 
-function check_if_same_color(cards) {
-    if (cards.isEmpty()) {
-        return;
+    this.small = function(card2)
+    {
+        return this.cmpr(card2) < 0
     }
-    var prev = cards[0]
-    for (var ii = 0; ii < cards.length; ii++) {
-        var card = cards[ii]
-        if (card.color != prev.color) {
-            console.log(e.stack);
-            throw "different color"
-        }
-        prev = card
-    }
-}
 
-function sort_cards(player_cards) {
-    player_cards.sort(card_sorter)
+    this.equal = function(card2)
+    {
+        return this.cmpr(card2) == 0
+    }
+
 }
 
 
-function associate_Color_2_Card(player_cards) {
-    var color_2_cards_Table = {}
-    for (var ii = 0; ii < player_cards.length; ii++) {
-        var card = player_cards[ii]
-        if (!color_2_cards_Table[card.color]) {
-            color_2_cards_Table[card.color] = [];
-        }
-        color_2_cards_Table[card.color].push(card);
-        check_if_cards_sorted(color_2_cards_Table[card.color])
-    }
-    return color_2_cards_Table;
-}
 
-function create_color_point_table(color_2_cards_Table) {
-    var color_point_table = {}
-    for (var color in color_2_cards_Table) {
-        var point = RULE.calculate_cards_point_by(color_2_cards_Table[color])
-        color_point_table[color] = point;
-    }
-    return color_point_table;
-}
+
+
 
 function ss(cards) {
     var str = "";
@@ -192,69 +169,102 @@ function idiot_ai(self_id) {
 }
 
 
+//better AI
+// AI must implement this get_next_cmd = function (player_cards, public_cards, unused_card_num, op_id)
+//and return cmd to tell what it want to do
+// cmd = [player_id,"put", card];
+// cmd = [player_id,"give_up", card]s
+// cmd = [player_id,"pick", "from_which_color"]
+//DO NOT MODIFY PLAYER_CARDS, PUBLIC_CARDS!!!!! ONLY ACCESS IT
+
 function hjy_ai(self_id) {
     this.id = self_id
     this.cmd_to_put = []
     var therehold = -2
 
+
+    function associate_Color_2_Card(player_cards) {
+    var color_2_cards_Table = {}
+    for (var ii = 0; ii < player_cards.length; ii++) {
+        var card = player_cards[ii]
+        if (!color_2_cards_Table[card.color]) {
+            color_2_cards_Table[card.color] = [];
+        }
+        color_2_cards_Table[card.color].push(card);
+        RULE.check_if_cards_sorted(color_2_cards_Table[card.color])
+    }
+    return color_2_cards_Table;
+    }
+
+    function create_color_point_table(color_2_cards_Table) {
+        var color_point_table = {}
+        for (var color in color_2_cards_Table) {
+            var point = RULE.calculate_cards_point(color_2_cards_Table[color])
+            color_point_table[color] = point;
+        }
+        return color_point_table;
+    }
+
+
+
     this.find_focus_color = function (player_cards) {
         var focus_colors = []
         var color_2_cards_Table = associate_Color_2_Card(player_cards)
         var color_point_table = {}
-            // console.log(color_2_cards_Table)
+            // LOG(color_2_cards_Table)
         for (var color in color_2_cards_Table) {
-            var point = RULE.calculate_cards_point_by(color_2_cards_Table[color])
-                // console.log(color,point)
+            var point = RULE.calculate_cards_point(color_2_cards_Table[color])
+                // LOG(color,point)
             color_point_table[color] = point;
         }
 
         for (var ii = 0; ii < 2; ii++) {
-            var color = get_key_with_max_value(color_point_table)
+            var color = color_point_table.getMaxKey()
             focus_colors.push(color)
-                // console.log("found",color)
+                // LOG("found",color)
             delete color_point_table[color]
         }
 
-        console.log(this.id, " will focus on ", this.focus_colors)
+        LOG(this.id, " will focus on ", this.focus_colors)
         return focus_colors
-            // console.log(this.focus_colors)
+            // LOG(this.focus_colors)
     }
 
     this.print = function () {
-        console.log(this.id, " focus on ", this.focus_colors)
-        console.log(this.id, " going to put ", this.cmd_to_put)
+        LOG(this.id, " focus on ", this.focus_colors)
+        LOG(this.id, " going to put ", this.cmd_to_put)
     }
 
 
-      function cmd_sorter(cmd1, cmd2)
+    function cmd_sorter(cmd1, cmd2)
     {
         return  cmd1[2].cmpr(cmd2[2])
     }
 
-    this.get_next_cmd = function (player_cards, public_cards, unused_card_num, op_id) {
+    this.get_next_cmd = function (PLAYER_CARDS, PUBLIC_CARDS, unused_card_num, op_id) {
         
         var leftTime = unused_card_num/ 2;
 
         //for the first round pick the colors want to focus on
-        if (!this.focus_colors) { this.focus_colors = this.find_focus_color(player_cards)    }
+        if (!this.focus_colors) { this.focus_colors = this.find_focus_color(PLAYER_CARDS)    }
 
         //如果之前的步骤想好了，按之前的步骤来
         //TO DO if it is legal or better solution
         if (!this.cmd_to_put.isEmpty()) {
-            console.log('这回不用想了', this.cmd_to_put)
+            LOG('这回不用想了', this.cmd_to_put)
             this.cmd_to_put.sort(cmd_sorter)     
             var cmd = this.cmd_to_put.dequeue()
             var card = cmd[2]
             var color = card.color
 
-            if ( RULE.is_putCmd_legal(cmd, public_cards, player_cards) == true )
+            if ( RULE.is_putCmd_legal(cmd, PUBLIC_CARDS, PLAYER_CARDS) == true )
             {
-                console.log(this.id, " does not need to think this time")
+                LOG(this.id, " does not need to think this time")
 
-                // if（ RULE.calculate_cards_point_by(public_cards[color][this.id]) == 0 && leftTime < this.cmd_to_put.length )
+                // if（ RULE.calculate_cards_point(PUBLIC_CARDS[color][this.id]) == 0 && leftTime < this.cmd_to_put.length )
                 if(leftTime < this.cmd_to_put.length ){
 
-                    console.log("来不及了")
+                    LOG("来不及了")
                     //来不及了
                 }else
                 {
@@ -267,13 +277,13 @@ function hjy_ai(self_id) {
         //卡用完了，考虑换颜色
         if (this.cmd_to_put.isEmpty()) {
             log("卡用完了，考虑换颜色")
-            this.focus_colors = this.find_focus_color(player_cards)
+            this.focus_colors = this.find_focus_color(PLAYER_CARDS)
         }
 
-        console.log("想好的是", this.cmd_to_put)
+        LOG("想好的是", this.cmd_to_put)
 
 
-        var self_color_2_cards_Table = associate_Color_2_Card(player_cards)
+        var self_color_2_cards_Table = associate_Color_2_Card(PLAYER_CARDS)
         var color_2_point = create_color_point_table(self_color_2_cards_Table)
 
 
@@ -284,15 +294,15 @@ function hjy_ai(self_id) {
             if (color_2_point[color] > therehold) 
             {
                 var cards = self_color_2_cards_Table[color]
-                check_if_same_color(cards)
-                check_if_cards_sorted(cards)
+                RULE.check_if_same_color(cards)
+                RULE.check_if_cards_sorted(cards)
 
                 for (var ii = 0; ii < cards.length; ii++) {
                     var card = cards[ii]
                     var cmd = [this.id, "put", card]
 
                     //要比现在有的牌的小
-                    if (public_cards[color][this.id].isEmpty() || public_cards[color][this.id].last().cmpr(card) <= 0) {
+                    if (PUBLIC_CARDS[color][this.id].isEmpty() || PUBLIC_CARDS[color][this.id].last().cmpr(card) <= 0) {
                         this.cmd_to_put.push(cmd)
                     }
                 }
@@ -302,9 +312,9 @@ function hjy_ai(self_id) {
                     this.cmd_to_put.sort(cmd_sorter)  
 
                     var cmd = this.cmd_to_put.dequeue();
-                    console.log("找到可以用的牌 发第一张",cmd)
+                    LOG("找到可以用的牌 发第一张",cmd)
 
-                    if (RULE.is_putCmd_legal(cmd, public_cards, player_cards)) {
+                    if (RULE.is_putCmd_legal(cmd, PUBLIC_CARDS, PLAYER_CARDS)) {
                         return cmd;
                     }else
                     {
@@ -322,19 +332,19 @@ function hjy_ai(self_id) {
             var color = this.focus_colors[ii]
             var same_color_cards_holding = self_color_2_cards_Table[color]
             if (!same_color_cards_holding || same_color_cards_holding.isEmpty()) { continue  }
-            // console.log(color)
-            var giveUpZone = public_cards[color]["give_up"]
+            // LOG(color)
+            var giveUpZone = PUBLIC_CARDS[color]["give_up"]
             if(giveUpZone.isEmpty()){continue;}
             //如果有同颜色的卡可以pick
             
             if (leftTime < same_color_cards_holding.length -4 && leftTime < 10 ) { continue}     //要来得及
             
             //要比现在有的牌的小
-            var col = public_cards[color][this.id]
-            console.log(col)
+            var col = PUBLIC_CARDS[color][this.id]
+            LOG(col)
             if (col.isEmpty() || col.last().cmpr(giveUpZone.last()) <= 0) {
                 var cmd = [this.id, "pick", color]
-                if (RULE.is_PickCmd_legal(cmd, public_cards, player_cards)) {
+                if (RULE.is_PickCmd_legal(cmd, PUBLIC_CARDS, PLAYER_CARDS)) {
                     return cmd
                 }else
                 {
@@ -348,24 +358,24 @@ function hjy_ai(self_id) {
 
         //TO DO
         //look if eneymie need
-        for (var ii = 0; ii < player_cards.length; ii++) {
-            var card = player_cards[ii]
+        for (var ii = 0; ii < PLAYER_CARDS.length; ii++) {
+            var card = PLAYER_CARDS[ii]
             if (this.focus_colors.has(card.color)) {
                 continue;
             }
             var cmd = [this.id, "give_up", card]
 
-            if (RULE.is_giveUpCmd_legal(cmd, public_cards, player_cards)) {
+            if (RULE.is_giveUpCmd_legal(cmd, PUBLIC_CARDS, PLAYER_CARDS)) {
                 return cmd
             }
         }
 
 
         var e = new Error()
-        console.log(e.stack);
+        LOG(e.stack);
         log("DO NOT KNOW HOW TO DO !!???")
         this.print()
-        console.log(color_2_point)
+        LOG(color_2_point)
         while (true){}
     }
 
@@ -373,22 +383,53 @@ function hjy_ai(self_id) {
     
 
 var RULE = {
+    check_if_cards_sorted:function (cards) {
+    if (cards.isEmpty()) {
+        return;
+    }
+        var prev = cards[0]
+        for (var ii = 0; ii < cards.length; ii++) {
+            var card = cards[ii]
+            if (card.cmpr(prev) < 0) {
+                LOG(cards)
+                    // http://stackoverflow.com/questions/591857/how-can-i-get-a-javascript-stack-trace-when-i-throw-an-exception
+                var e = new Error();
+                LOG(e.stack);
+                throw "unsorted!!!"
+            }
+            prev = card
+        }
+    },
+
+    check_if_same_color:function (cards) {
+        if (cards.isEmpty()) {
+            return;
+        }
+        var prev = cards[0]
+        for (var ii = 0; ii < cards.length; ii++) {
+            var card = cards[ii]
+            if (card.color != prev.color) {
+                LOG(e.stack);
+                throw "different color"
+            }
+            prev = card
+        }
+    },
 
     calculate_player_point : function (desk, player_id) 
     {
         var result = {}
         var total = 0
-        for (var ii = 0; ii < __COLORS__.length; ii++)
+        for (var ii = 0; ii < COLORS.length; ii++)
          {
-            var color = __COLORS__[ii]
-
+            var color = COLORS[ii]
             if (!desk.public_cards[color]) 
             {
                 throw "no such color";
             }
 
             var same_color_cards_col = desk.public_cards[color][player_id]
-            var point = RULE.calculate_cards_point_by(same_color_cards_col)
+            var point = RULE.calculate_cards_point(same_color_cards_col)
             result[color] = point
             total += point
         }
@@ -396,19 +437,18 @@ var RULE = {
         return result;
     },
 
-    calculate_cards_point_by : function (same_color_cards) 
+    calculate_cards_point : function (same_color_cards) 
     {
         if (!same_color_cards || same_color_cards.isEmpty()) 
         {
             return 0;
         }
-        var mul = 1,
-            card_point = 0
-        check_if_cards_sorted(same_color_cards)
-        check_if_same_color(same_color_cards)
+        RULE.check_if_cards_sorted(same_color_cards)
+        RULE.check_if_same_color(same_color_cards)
+
+        var mul = 1, card_point = 0
         for (var ii = 0; ii < same_color_cards.length; ii++) 
         {
-
             var cur_card = same_color_cards[ii]
             var value = cur_card.value
             if (value == "double") {
@@ -477,9 +517,9 @@ var RULE = {
 
 function Desk(player_id1, player_id2) {
     var _unused_cards = []
-    for (var ii = 0; ii < __COLORS__.length; ii++) {
-        var color = __COLORS__[ii]
-        for (var jj = 1; jj <= __VALUE_NUM__; jj++) {
+    for (var ii = 0; ii < COLORS.length; ii++) {
+        var color = COLORS[ii]
+        for (var jj = 1; jj <= CARD_NUM; jj++) {
             if (jj == 1) {
                 var card = new Card(color, "double")
             } else {
@@ -500,8 +540,8 @@ function Desk(player_id1, player_id2) {
     // log(this.player_cards)
 
     this.public_cards = {}
-    for (var ii = 0; ii < __COLORS__.length; ii++) {
-        var color = __COLORS__[ii]
+    for (var ii = 0; ii < COLORS.length; ii++) {
+        var color = COLORS[ii]
         this.public_cards[color] = {}
         this.public_cards[color]["give_up"] = []
         this.public_cards[color][player_id1] = []
@@ -509,28 +549,36 @@ function Desk(player_id1, player_id2) {
     }
 
 
+    function card_sorter(c1, c2) {
+    return c1.cmpr(c2)
+    }
+
+    function sort_cards(player_cards) {
+        player_cards.sort(card_sorter)
+    }
 
 
-    this.unused_card_num = function () {
+
+    this.unusedNum = function () {
         return _unused_cards.length;
     }
 
 
     this.print = function () {
-        console.log(player_id1, " is holding ", ss2(this.player_cards[player_id1]))
-        console.log(player_id2, " is holding ", ss2(this.player_cards[player_id2]))
+        LOG(player_id1, " is holding ", ss2(this.player_cards[player_id1]))
+        LOG(player_id2, " is holding ", ss2(this.player_cards[player_id2]))
 
-        for (var ii = 0; ii < __COLORS__.length; ii++) {
-            var color = __COLORS__[ii]
-            console.log("-----", color, "---------")
+        for (var ii = 0; ii < COLORS.length; ii++) {
+            var color = COLORS[ii]
+            LOG("-----", color, "---------")
             var col = this.public_cards[color]
             for (var key in col) {
-                console.log(key, " (", ss2(col[key]), ")")
+                LOG(key, " (", ss2(col[key]), ")")
 
             }
         }
 
-        console.log("There are " + this.unused_card_num() + ' cards left')
+        LOG("There are " + this.unusedNum() + ' cards left')
 
     }
 
@@ -548,7 +596,7 @@ function Desk(player_id1, player_id2) {
 
             if(!RULE.is_putCmd_legal(cmd, this.public_cards, this.player_cards[id]))
             {
-                var e = new Error();   console.log(e.stack);
+                var e = new Error();   LOG(e.stack);
                 throw "add the wrong card"
             }
 
@@ -567,7 +615,7 @@ function Desk(player_id1, player_id2) {
             var card = cmd[2]
             if(!RULE.is_giveUpCmd_legal(cmd, this.public_cards, this.player_cards[id]))
             {
-                var e = new Error();   console.log(e.stack);
+                var e = new Error();   LOG(e.stack);
                 throw  "wrong give up"
             }
 
@@ -584,7 +632,7 @@ function Desk(player_id1, player_id2) {
             var color = cmd[2]
             if(!RULE.is_PickCmd_legal(cmd, this.public_cards, this.player_cards[id]))
             {
-                var e = new Error();   console.log(e.stack);
+                var e = new Error();   LOG(e.stack);
                 throw  "wrong pick"
             }
 
@@ -602,60 +650,71 @@ function Desk(player_id1, player_id2) {
 
 
 
-function game(ai1, ai2) {
+function game(ai1, ai2) 
+{
     var id1 = ai1.id,
         id2 = ai2.id;
     var desk = new Desk(id1, id2)
         // log(desk)
 
     var round = 1
-    while (desk.unused_card_num() != 0) {
-        console.log("------begin " + round + "------")
+    while (desk.unusedNum() != 0) 
+    {
+        LOG("------begin " + round + "------")
         desk.print()
-        console.log()
+        LOG()
 
-        var cmd = ai1.get_next_cmd(desk.player_cards[id1], desk.public_cards, desk.unused_card_num(), id2)
-        console.log(cmd[0] + " " + cmd[1] + " [" + cmd[2].toString() + "]")
+        //the first ai think 
+        var cmd = ai1.get_next_cmd(desk.player_cards[id1], desk.public_cards, desk.unusedNum(), id2)
+        LOG(cmd[0] + " " + cmd[1] + " [" + cmd[2].toString() + "]")
         desk.apply_cmd(cmd)
-        if (desk.unused_card_num() == 0) {
-            console.log("------end " + round + "------\n")
+        if (desk.unusedNum() == 0) {
+            LOG("------end " + round + "------\n")
             break;
         }
-        cmd = ai2.get_next_cmd(desk.player_cards[id2], desk.public_cards, desk.unused_card_num(), id1)
-        console.log(cmd[0] + " " + cmd[1] + " [" + cmd[2].toString() + "]")
+
+
+        //the second ai think 
+        cmd = ai2.get_next_cmd(desk.player_cards[id2], desk.public_cards, desk.unusedNum(), id1)
+        LOG(cmd[0] + " " + cmd[1] + " [" + cmd[2].toString() + "]")
         desk.apply_cmd(cmd)
 
-        console.log("------end " + round + "------\n")
+        LOG("------end " + round + "------\n")
         round++
     }
 
-    assert(desk.unused_card_num() == 0, "not run out of cards")
+    assert(desk.unusedNum() == 0, "not run out of cards")
 
-    log("--GAME SCORE--")
+    LOG("--GAME SCORE--")
     var ai1_result = RULE.calculate_player_point(desk, id1)
     var ai2_result = RULE.calculate_player_point(desk, id2)
-    console.log(id1, ai1_result)
-    console.log(id2, ai2_result)
-    log("-----------")
+    LOG(id1, ai1_result)
+    LOG(id2, ai2_result)
+    LOG("-----------")
 
     if (ai1_result["total"] > ai2_result["total"]) {
-        console.log(id1, " WIN")
+        // LOG(id1, " WIN")
+        return id1
     } else if (ai1_result["total"] < ai2_result["total"]) {
-        console.log(id2, " WIN")
+        // LOG(id2, " WIN")
+        return id2
     } else {
-        console.log("Draw")
+        // LOG("Draw")
+        return null
     }
 }
 
-// var ai1 = new hjy_ai("hjy")
-// var ai2 = new hjy_ai("alice")
 
-var ai1 = new hjy_ai("hjy")
+var ai1 = new idiot_ai("hjy")
 var ai2 = new idiot_ai("alice")
 
-game(ai1, ai2)
-    // function foo()
-    // {
-    //   return 1, 2
-    // }
+var winner = game(ai1, ai2)
+if(winner)
+{
+    LOG(winner, "WIN !")
+}else
+{
+    LOG("Draw")
+}
+
 

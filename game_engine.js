@@ -31,7 +31,7 @@ Array.prototype.shuffle = function (arr) {
     this.sort(internal_shuffler);
 }
 
-Array.prototype.isEmpty = function () {
+Object.prototype.isEmpty = function () {
     return this.length == 0
 }
 
@@ -48,20 +48,7 @@ Array.prototype.last = function () {
     return this[this.length - 1]
 }
 
-Object.prototype.getMaxKey = function()
-{
-    var maxKey, maxValue;
-    for (var key in this) {
-        if (!maxKey && !maxValue) {
-            maxKey = key
-            maxValue = this[key]
-        } else if (this[key] > maxValue) {
-            maxKey = key
-            maxValue = this[key]
-        }
-    }
-    return maxKey;
-}
+
 
 
 Object.prototype.VClone = function (){
@@ -157,9 +144,6 @@ function ss2(cards) {
 function idiot_ai(self_id) {
     this.id = self_id
 
-    // cmd = [player_id,"put", card];
-    // cmd = [player_id,"give_up", card]s
-    // cmd = [player_id,"pick", "from_which_color"]
     this.get_next_cmd = function (player_cards, public_cards, desk, op_id) {
         //他妈的白痴，随便挑一张牌，扔了就是
         var index = randInt(0, player_cards.length - 1);
@@ -175,8 +159,7 @@ function idiot_ai(self_id) {
 // cmd = [player_id,"put", card];
 // cmd = [player_id,"give_up", card]s
 // cmd = [player_id,"pick", "from_which_color"]
-//DO NOT MODIFY PLAYER_CARDS, PUBLIC_CARDS!!!!! ONLY ACCESS IT
-
+//DO NOT MODIFY PLAYER_CARDS, PUBLIC_CARDS!!!!! ONLY ACCESS IT!!
 function hjy_ai(self_id) {
     this.id = self_id
     this.cmd_to_put = []
@@ -199,12 +182,31 @@ function hjy_ai(self_id) {
     function create_color_point_table(color_2_cards_Table) {
         var color_point_table = {}
         for (var color in color_2_cards_Table) {
+            //http://stackoverflow.com/questions/8312459/iterate-through-object-properties
+            if(!color_point_table.hasOwnProperty(color)){continue}  
             var point = RULE.calculate_cards_point(color_2_cards_Table[color])
             color_point_table[color] = point;
         }
         return color_point_table;
     }
 
+
+     function getMaxKey(dict)
+    {
+        var maxKey, maxValue;
+        for (var key in dict) {
+             //http://stackoverflow.com/questions/8312459/iterate-through-object-properties
+            if(!dict.hasOwnProperty(key)){continue}  
+            if (!maxKey && !maxValue) {
+                maxKey = key
+                maxValue = dict[key]
+            } else if (dict[key] > maxValue) {
+                maxKey = key
+                maxValue = dict[key]
+            }
+        }
+        return maxKey;
+    }
 
 
     this.find_focus_color = function (player_cards) {
@@ -213,13 +215,15 @@ function hjy_ai(self_id) {
         var color_point_table = {}
             // LOG(color_2_cards_Table)
         for (var color in color_2_cards_Table) {
+            //http://stackoverflow.com/questions/8312459/iterate-through-object-properties
+            if(!color_2_cards_Table.hasOwnProperty(color)){continue}  
             var point = RULE.calculate_cards_point(color_2_cards_Table[color])
                 // LOG(color,point)
             color_point_table[color] = point;
         }
 
         for (var ii = 0; ii < 2; ii++) {
-            var color = color_point_table.getMaxKey()
+            var color = getMaxKey(color_point_table)
             focus_colors.push(color)
                 // LOG("found",color)
             delete color_point_table[color]
@@ -231,9 +235,12 @@ function hjy_ai(self_id) {
     }
 
     this.print = function () {
-        LOG(this.id, " focus on ", this.focus_colors)
-        LOG(this.id, " going to put ", this.cmd_to_put)
+        LOG(this.id, " AI DEBUG -------------------")
+        LOG("| focus on ", this.focus_colors)
+        LOG("| going to put ", this.cmd_to_put)
+        LOG("---------------------")
     }
+
 
 
     function cmd_sorter(cmd1, cmd2)
@@ -246,12 +253,14 @@ function hjy_ai(self_id) {
         var leftTime = unused_card_num/ 2;
 
         //for the first round pick the colors want to focus on
-        if (!this.focus_colors) { this.focus_colors = this.find_focus_color(PLAYER_CARDS)    }
+        if (!this.focus_colors) { 
+            LOG("没有集中颜色 想一下")
+            this.focus_colors = this.find_focus_color(PLAYER_CARDS)    }
 
         //如果之前的步骤想好了，按之前的步骤来
         //TO DO if it is legal or better solution
         if (!this.cmd_to_put.isEmpty()) {
-            LOG('这回不用想了', this.cmd_to_put)
+            LOG('用之前的策略 这回应该不用想了', this.cmd_to_put)
             this.cmd_to_put.sort(cmd_sorter)     
             var cmd = this.cmd_to_put.dequeue()
             var card = cmd[2]
@@ -259,40 +268,43 @@ function hjy_ai(self_id) {
 
             if ( RULE.is_putCmd_legal(cmd, PUBLIC_CARDS, PLAYER_CARDS) == true )
             {
-                LOG(this.id, " does not need to think this time")
-
                 // if（ RULE.calculate_cards_point(PUBLIC_CARDS[color][this.id]) == 0 && leftTime < this.cmd_to_put.length )
                 if(leftTime < this.cmd_to_put.length ){
 
-                    LOG("来不及了")
+                    LOG("来不及发牌了了 妈的")
                     //来不及了
                 }else
                 {
-
+                    LOG("嗯 的确不要想")
                     return cmd
                 }
+            }else
+            {
+                LOG("按规则发不了这牌啊")
             }
         }
 
         //卡用完了，考虑换颜色
         if (this.cmd_to_put.isEmpty()) {
-            log("卡用完了，考虑换颜色")
+            LOG("之前想的策略用完了，考虑换颜色")
             this.focus_colors = this.find_focus_color(PLAYER_CARDS)
         }
 
-        LOG("想好的是", this.cmd_to_put)
+        
 
 
         var self_color_2_cards_Table = associate_Color_2_Card(PLAYER_CARDS)
         var color_2_point = create_color_point_table(self_color_2_cards_Table)
 
-
+        LOG("先看看有没有颜色可以发")
         for (var ii = 0; ii < this.focus_colors.length; ii++) 
         {
             var color = this.focus_colors[ii]
             //牌足够好，发
             if (color_2_point[color] > therehold) 
             {
+                LOG("看起来",color,"挺好的")
+
                 var cards = self_color_2_cards_Table[color]
                 RULE.check_if_same_color(cards)
                 RULE.check_if_cards_sorted(cards)
@@ -309,24 +321,31 @@ function hjy_ai(self_id) {
 
 
                 if(!this.cmd_to_put.isEmpty()){
+
+                     LOG("想到的新策略是", this.cmd_to_put)
+
                     this.cmd_to_put.sort(cmd_sorter)  
 
                     var cmd = this.cmd_to_put.dequeue();
                     LOG("找到可以用的牌 发第一张",cmd)
 
                     if (RULE.is_putCmd_legal(cmd, PUBLIC_CARDS, PLAYER_CARDS)) {
+                        LOG("我发啦")
                         return cmd;
                     }else
                     {
-                        log("他妈的 怎么回事")
-                        log(cmd)
+                        LOG("他妈的 怎么回事 这牌按规则不能发")
+                        LOG(cmd)
                     }
                 }
             }
         }
 
-      
+     
+        
+
         //根据之前的focus color 计算
+        LOG("没有牌可以发\n要不在看看有没有牌可以捡")
         for (var ii = 0; ii < this.focus_colors.length; ii++) 
         {
             var color = this.focus_colors[ii]
@@ -341,14 +360,17 @@ function hjy_ai(self_id) {
             
             //要比现在有的牌的小
             var col = PUBLIC_CARDS[color][this.id]
-            LOG(col)
+            LOG("看看",col,"")
             if (col.isEmpty() || col.last().cmpr(giveUpZone.last()) <= 0) {
+                LOG(col.last(),"不错的样子")
+
                 var cmd = [this.id, "pick", color]
                 if (RULE.is_PickCmd_legal(cmd, PUBLIC_CARDS, PLAYER_CARDS)) {
+                     LOG("捡",col.last())
                     return cmd
                 }else
                 {
-                    log("捡不了")
+                    LOG("捡不了")
                 }
             }
          }       
@@ -358,6 +380,8 @@ function hjy_ai(self_id) {
 
         //TO DO
         //look if eneymie need
+        LOG("没法捡 扔不要的吧")
+
         for (var ii = 0; ii < PLAYER_CARDS.length; ii++) {
             var card = PLAYER_CARDS[ii]
             if (this.focus_colors.has(card.color)) {
@@ -366,17 +390,16 @@ function hjy_ai(self_id) {
             var cmd = [this.id, "give_up", card]
 
             if (RULE.is_giveUpCmd_legal(cmd, PUBLIC_CARDS, PLAYER_CARDS)) {
+                LOG("扔",cmd)
                 return cmd
             }
         }
 
-
-        var e = new Error()
-        LOG(e.stack);
-        log("DO NOT KNOW HOW TO DO !!???")
+        LOG("他妈的想不出来了!!??? 不可能啊")
         this.print()
         LOG(color_2_point)
-        while (true){}
+        LOG("写这个的傻逼帮我看看咋回事")
+        assert(1==0)
     }
 
 }
@@ -537,7 +560,7 @@ function Desk(player_id1, player_id2) {
     sort_cards(this.player_cards[player_id1])
     sort_cards(this.player_cards[player_id2])
 
-    // log(this.player_cards)
+    // LOG(this.player_cards)
 
     this.public_cards = {}
     for (var ii = 0; ii < COLORS.length; ii++) {
@@ -565,6 +588,7 @@ function Desk(player_id1, player_id2) {
 
 
     this.print = function () {
+        LOG("----------------DESK---------------------")
         LOG(player_id1, " is holding ", ss2(this.player_cards[player_id1]))
         LOG(player_id2, " is holding ", ss2(this.player_cards[player_id2]))
 
@@ -573,12 +597,12 @@ function Desk(player_id1, player_id2) {
             LOG("-----", color, "---------")
             var col = this.public_cards[color]
             for (var key in col) {
+                if(!col.hasOwnProperty(key)){continue}
                 LOG(key, " (", ss2(col[key]), ")")
-
             }
         }
-
         LOG("There are " + this.unusedNum() + ' cards left')
+        LOG("-------------------------------------------")
 
     }
 
@@ -611,7 +635,7 @@ function Desk(player_id1, player_id2) {
 
         } else if (action == "give_up") {
             //remove card from player
-            // log(cmd)
+            // LOG(cmd)
             var card = cmd[2]
             if(!RULE.is_giveUpCmd_legal(cmd, this.public_cards, this.player_cards[id]))
             {
@@ -655,7 +679,7 @@ function game(ai1, ai2)
     var id1 = ai1.id,
         id2 = ai2.id;
     var desk = new Desk(id1, id2)
-        // log(desk)
+        // LOG(desk)
 
     var round = 1
     while (desk.unusedNum() != 0) 
@@ -705,7 +729,7 @@ function game(ai1, ai2)
 }
 
 
-var ai1 = new idiot_ai("hjy")
+var ai1 = new hjy_ai("hjy")
 var ai2 = new idiot_ai("alice")
 
 var winner = game(ai1, ai2)
